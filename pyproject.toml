@@ -1,0 +1,41 @@
+[project]
+name = "nu-workdir-hist"
+version = "0.1.0"
+description = "List nushell command-history entries that were executed in the current working directory."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "nu-workdir-hist contributors" }]
+keywords = ["nushell", "history", "cli", "sqlite"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Shells",
+]
+dependencies = []
+
+[project.scripts]
+nu-workdir-hist = "nu_workdir_hist.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/example/nu-workdir-hist"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
