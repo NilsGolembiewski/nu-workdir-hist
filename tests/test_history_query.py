@@ -11,9 +11,11 @@ from nu_workdir_hist import history
 from nu_workdir_hist.errors import HistoryError, NoSqliteHistoryError
 
 
-def test_query_returns_commands_for_cwd_most_recent_first(populated_db, proj_dir):
+def test_query_returns_commands_for_cwd_oldest_first(populated_db, proj_dir):
+    # The N most-recent matching rows are selected, then printed oldest-first
+    # (chronological): lowest id first.
     rows = history.query_history(populated_db, str(proj_dir), limit=50)
-    assert [r.command_line for r in rows] == ["rm -rf build", "git status", "ls -la"]
+    assert [r.command_line for r in rows] == ["ls -la", "git status", "rm -rf build"]
 
 
 def test_query_excludes_null_cwd_rows(populated_db, proj_dir):
@@ -27,13 +29,43 @@ def test_query_excludes_other_cwds(populated_db, other_dir):
 
 
 def test_query_limit_caps_results(populated_db, proj_dir):
+    # --last 2 selects the 2 most-recent (ids 4, 2) then prints oldest-first.
     rows = history.query_history(populated_db, str(proj_dir), limit=2)
-    assert [r.command_line for r in rows] == ["rm -rf build", "git status"]
+    assert [r.command_line for r in rows] == ["git status", "rm -rf build"]
 
 
 def test_query_limit_zero_means_no_limit(populated_db, proj_dir):
     rows = history.query_history(populated_db, str(proj_dir), limit=0)
     assert len(rows) == 3
+
+
+def test_query_limit_zero_returns_oldest_first(populated_db, proj_dir):
+    rows = history.query_history(populated_db, str(proj_dir), limit=0)
+    # Oldest-first even with no limit.
+    assert [r.id for r in rows] == [1, 2, 4]
+
+
+def test_query_limit_selects_most_recent_then_oldest_first(populated_db, tmp_path):
+    # 5 matching rows with distinct ids; --last 3 selects the 3 most-recent
+    # (ids 3,4,5) and prints them oldest-first (3,4,5).
+    db = tmp_path / "h.sqlite3"
+    con = sqlite3.connect(str(db))
+    con.execute(
+        "CREATE TABLE history (id INTEGER PRIMARY KEY, command_line TEXT NOT NULL, "
+        "cwd TEXT, start_timestamp INTEGER, exit_status INTEGER)"
+    )
+    cwd = str(tmp_path)
+    for i in range(1, 6):
+        con.execute(
+            "INSERT INTO history (id, command_line, cwd, start_timestamp, exit_status) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (i, f"cmd{i}", cwd, 1700000000000 + i * 1000, 0),
+        )
+    con.commit()
+    con.close()
+    rows = history.query_history(db, cwd, limit=3)
+    assert [r.command_line for r in rows] == ["cmd3", "cmd4", "cmd5"]
+    assert [r.id for r in rows] == [3, 4, 5]
 
 
 def test_query_unknown_cwd_returns_empty(populated_db):
@@ -43,12 +75,13 @@ def test_query_unknown_cwd_returns_empty(populated_db):
 
 def test_query_carries_metadata(populated_db, proj_dir):
     rows = history.query_history(populated_db, str(proj_dir), limit=50)
+    # Oldest-first: the first row is the oldest (id 1).
     top = rows[0]
-    assert top.command_line == "rm -rf build"
-    assert top.start_timestamp == 1700000003000
+    assert top.command_line == "ls -la"
+    assert top.start_timestamp == 1700000000000
     assert top.exit_status == 0
     assert top.cwd == str(proj_dir)
-    assert top.id == 4
+    assert top.id == 1
 
 
 def test_query_opens_read_only(populated_db, proj_dir):

@@ -1,7 +1,11 @@
-"""Read nushell's SQLite history, filtered by cwd, most-recent first.
+"""Read nushell's SQLite history, filtered by cwd, oldest-first.
 
 The DB is opened read-only (`?mode=ro`) to avoid locking a running nushell
 (which opens it with WAL journaling). See the research report for the schema.
+
+Ordering: the N most-recent matching rows are selected (by `id DESC`, capped at
+`limit`), then returned oldest-first (lowest id first) so the output is in
+chronological order. `limit == 0` means no limit (all matching rows).
 """
 
 from __future__ import annotations
@@ -15,6 +19,8 @@ from .errors import HistoryError
 
 __all__ = ["HistoryRow", "query_history"]
 
+# Select the N most-recent matching rows; the caller reverses the result to
+# present them oldest-first. LIMIT -1 means "no limit" in SQLite.
 _SELECT_SQL = (
     "SELECT command_line, cwd, start_timestamp, exit_status, id "
     "FROM history "
@@ -22,7 +28,6 @@ _SELECT_SQL = (
     "ORDER BY id DESC "
     "LIMIT ?"
 )
-# LIMIT of -1 means "no limit" in SQLite.
 _NO_LIMIT = -1
 
 
@@ -44,11 +49,13 @@ def _ro_uri(db_path: Path) -> str:
 
 
 def query_history(db_path: Path, cwd: str, *, limit: int) -> list[HistoryRow]:
-    """Return history rows for `cwd`, most-recent first, capped at `limit`.
+    """Return history rows for `cwd`, oldest-first, capped at `limit`.
 
-    `limit == 0` means no limit (return all matching rows). NULL cwds are
-    excluded. Raises :class:`HistoryError` if the DB is unreadable or lacks
-    the expected `history` table.
+    The `limit` most-recent matching rows (highest `id`) are selected, then
+    returned in chronological order (lowest `id` first). `limit == 0` means no
+    limit (return all matching rows). NULL cwds are excluded. Raises
+    :class:`HistoryError` if the DB is unreadable or lacks the expected
+    `history` table.
     """
     effective_limit = _NO_LIMIT if limit <= 0 else limit
     try:
@@ -69,6 +76,8 @@ def query_history(db_path: Path, cwd: str, *, limit: int) -> list[HistoryRow]:
             )
             for r in cur
         ]
+        # The query yields most-recent first; reverse to present oldest-first.
+        rows.reverse()
         return rows
     except sqlite3.Error as exc:
         raise HistoryError(

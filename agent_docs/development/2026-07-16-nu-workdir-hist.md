@@ -6,7 +6,13 @@
 > 2026-07-16 remediation: wired `--version` (`action="version"`) to
 > `build_parser` using `__version__` from `nu_workdir_hist/__init__.py` so
 > `nu-workdir-hist --version` prints `nu-workdir-hist 0.1.0` and exits 0;
-> added focused CLI tests for it.
+> > added focused CLI tests for it.
+>
+> 2026-07-16 ordering reversal: the tool now lists matching commands
+> oldest-first (chronological) instead of most-recent-first. `--last N`
+> (default 50) still selects the N most-recent matching rows (by `id DESC`),
+> which are then printed oldest-first (reversed for display). `--last 0`
+> still means "all", oldest-first. Tests and README updated.
 
 ## What Changed
 
@@ -92,8 +98,10 @@ backend and guide users toward it.
 - **Plaintext/missing backend:** if `history.sqlite3` is absent, the tool prints
   an actionable stderr message (mentions `file_format = "sqlite"` and
   `history import`, and notes a sibling `history.txt` if present) and exits 2.
-- **Output:** one command per line, most-recent first. `--verbose` prefixes each
-  line with `[<ISO-UTC timestamp>] exit=<code>  `.
+- **Output:** one command per line, oldest-first (chronological order). The N
+  most-recent matching rows are selected (by `id DESC LIMIT N`) and then
+  reversed for display so the output reads oldest→newest. `--verbose` prefixes
+  each line with `[<ISO-UTC timestamp>] exit=<code>  `.
 
 ## Tests
 

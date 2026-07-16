@@ -3,8 +3,8 @@
 List nushell command-history entries that were executed in the current working directory.
 
 `nu-workdir-hist` reads nushell's SQLite command history (`history.sqlite3`) and
-prints the commands that were run from the directory you invoke it in, most-recent
-first.
+prints the commands that were run from the directory you invoke it in, oldest
+first (chronological order).
 
 ## Requirements
 
@@ -48,7 +48,7 @@ $ nu-workdir-hist -v       # include timestamp + exit status
 
 | Flag | Env var | Default | Description |
 | --- | --- | --- | --- |
-| `-n N`, `--last N` | `NU_WORKDIR_HIST_LAST` | `50` | Number of commands to print (most-recent first). `0` = no limit / print all. Negative values are rejected. |
+| `-n N`, `--last N` | `NU_WORKDIR_HIST_LAST` | `50` | Print the N most-recent commands, oldest-first (chronological). `0` = no limit / print all. Negative values are rejected. |
 | `-v`, `--verbose` | — | off | Also print the start timestamp and exit status for each command. |
 | `--physical` | `NU_WORKDIR_HIST_PHYSICAL=1` | off | Resolve the current working directory with `os.path.realpath` (symlink-resolved / physical path) before matching. Use this if you browse through symlinks and the stored `cwd` reflects the physical location. |
 | `--history-path PATH` | `NU_HISTORY_PATH` | nushell default | Path to `history.sqlite3`. Overrides the per-OS config-dir resolution. |

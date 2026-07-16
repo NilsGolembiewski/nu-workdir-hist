@@ -54,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-n", "--last",
         type=int, default=None,
         metavar="N",
-        help="number of commands to print, most-recent first (default: 50; "
+        help="print the N most-recent commands, oldest-first (default: 50; "
              "0 = no limit / all). Negative values are rejected.",
     )
     p.add_argument(

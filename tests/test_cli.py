@@ -136,25 +136,26 @@ def test_main_prints_commands_for_cwd(populated_db, proj_dir, chdir_to):
     assert rc == 0
 
 
-def test_main_output_most_recent_first(populated_db, proj_dir, chdir_to, capsys):
+def test_main_output_oldest_first(populated_db, proj_dir, chdir_to, capsys):
     chdir_to(str(proj_dir))
     cli.main(["--history-path", str(populated_db)])
     out = capsys.readouterr().out.strip().splitlines()
-    assert out == ["rm -rf build", "git status", "ls -la"]
+    assert out == ["ls -la", "git status", "rm -rf build"]
 
 
 def test_main_limit_caps(populated_db, proj_dir, chdir_to, capsys):
+    # --last 2 selects the 2 most-recent then prints oldest-first.
     chdir_to(str(proj_dir))
     cli.main(["--history-path", str(populated_db), "-n", "2"])
     out = capsys.readouterr().out.strip().splitlines()
-    assert out == ["rm -rf build", "git status"]
+    assert out == ["git status", "rm -rf build"]
 
 
 def test_main_zero_means_all(populated_db, proj_dir, chdir_to, capsys):
     chdir_to(str(proj_dir))
     cli.main(["--history-path", str(populated_db), "-n", "0"])
     out = capsys.readouterr().out.strip().splitlines()
-    assert out == ["rm -rf build", "git status", "ls -la"]
+    assert out == ["ls -la", "git status", "rm -rf build"]
 
 
 def test_main_no_matches_prints_nothing(populated_db, proj_dir, chdir_to, capsys):
@@ -174,7 +175,7 @@ def test_main_verbose_includes_timestamp_and_exit(populated_db, proj_dir, chdir_
     chdir_to(str(proj_dir))
     cli.main(["--history-path", str(populated_db), "-v", "-n", "1"])
     out = capsys.readouterr().out
-    # The single line should mention the command, an ISO timestamp, and exit.
+    # --last 1 selects the single most-recent command (id 4).
     assert "rm -rf build" in out
     assert "2023-11-14T22:13:23Z" in out
     assert "exit=0" in out
@@ -207,7 +208,7 @@ def test_main_uses_env_history_path(populated_db, proj_dir, chdir_to, monkeypatc
     rc = cli.main([])
     assert rc == 0
     out = capsys.readouterr().out.strip().splitlines()
-    assert out == ["rm -rf build", "git status", "ls -la"]
+    assert out == ["ls -la", "git status", "rm -rf build"]
 
 
 def test_main_history_path_flag_overrides_env(populated_db, proj_dir, chdir_to, monkeypatch, capsys):
@@ -230,7 +231,7 @@ def test_main_physical_mode_matches_resolved_path(populated_db, tmp_path, chdir_
     rc = cli.main(["--history-path", str(populated_db), "--physical", "-n", "10"])
     assert rc == 0
     out = capsys.readouterr().out.strip().splitlines()
-    assert out == ["rm -rf build", "git status", "ls -la"]
+    assert out == ["ls -la", "git status", "rm -rf build"]
 
 
 # ---------- subprocess end-to-end (real installed entry point path) ----------
@@ -264,4 +265,4 @@ def test_subprocess_runs_against_temp_db(tmp_path):
         capture_output=True, text=True, env=env, cwd=str(tmp_path),
     )
     assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.strip().splitlines() == ["echo second", "echo first"]
+    assert proc.stdout.strip().splitlines() == ["echo first", "echo second"]
